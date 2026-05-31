@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { useGoogleDriveSync } from './hooks/useGoogleDriveSync';
+import { useFirebaseSync } from './hooks/useFirebaseSync';
 import { TimerCard } from './components/TimerCard';
 import type { TimerItem } from './components/TimerCard';
 import { TimerModal } from './components/TimerModal';
@@ -45,32 +45,35 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editingTimer, setEditingTimer] = useState<TimerItem | null>(null);
 
-  // Google Drive Sync Hook
+  // Firebase Sync Hook
   const {
-    clientId,
-    setClientId,
+    firebaseConfig,
     autoSync,
     setAutoSync,
     lastSynced,
+    isConfigured,
     isConnected,
+    userEmail,
     isLoading: isSyncLoading,
     error: syncError,
-    connect: connectSync,
-    cancelConnect: cancelConnectSync,
-    disconnect: disconnectSync,
+    saveConfig,
+    clearConfig,
+    signUp,
+    signIn,
+    logout,
     syncNow,
     pushData,
     pullData,
     categories,
     setCategories,
-  } = useGoogleDriveSync();
+  } = useFirebaseSync();
 
   // Sync theme attribute with document root
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // Startup Sync: Sync with Google Drive once when connected
+  // Startup Sync: Sync with Firebase once when connected
   useEffect(() => {
     if (isConnected && autoSync) {
       syncNow(timers).then((merged) => {
@@ -86,7 +89,7 @@ export function App() {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  // Helper helper to upload data in background for auto-sync
+  // Helper to upload data in background for auto-sync
   const triggerAutoSync = (updatedTimers: TimerItem[]) => {
     if (isConnected && autoSync) {
       pushData(updatedTimers).catch((e) => console.warn('Auto-sync push failed:', e));
@@ -249,7 +252,7 @@ export function App() {
     }
   };
 
-  // Google sync direct triggers
+  // Firebase sync direct triggers
   const handleManualSync = async () => {
     const merged = await syncNow(timers);
     if (merged) {
@@ -259,18 +262,18 @@ export function App() {
   };
 
   const handleManualPush = async () => {
-    if (confirm('현재 기기의 데이터로 구글 드라이브 데이터를 덮어쓰시겠습니까?')) {
+    if (confirm('현재 기기의 데이터로 서버 데이터를 덮어쓰시겠습니까? (서버의 정보는 손실됩니다)')) {
       const success = await pushData(timers);
-      if (success) alert('구글 드라이브로 백업이 완료되었습니다.');
+      if (success) alert('서버로 데이터 업로드가 완료되었습니다.');
     }
   };
 
   const handleManualPull = async () => {
-    if (confirm('구글 드라이브에 저장된 데이터로 현재 타이머를 덮어쓰시겠습니까? (현재 기기의 정보는 손실됩니다)')) {
+    if (confirm('서버에 저장된 데이터로 현재 타이머를 덮어쓰시겠습니까? (현재 기기의 정보는 손실됩니다)')) {
       const remoteData = await pullData();
       if (remoteData !== null) {
         setTimers(remoteData.timers);
-        alert('구글 드라이브로부터 데이터를 성공적으로 불러왔습니다.');
+        alert('서버로부터 데이터를 성공적으로 불러왔습니다.');
       }
     }
   };
@@ -385,17 +388,20 @@ export function App() {
       <SettingsPanel
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-        clientId={clientId}
-        onClientIdChange={setClientId}
-        autoSync={autoSync}
-        onAutoSyncToggle={setAutoSync}
+        firebaseConfig={firebaseConfig}
+        onSaveConfig={saveConfig}
+        onClearConfig={clearConfig}
+        isConfigured={isConfigured}
         isConnected={isConnected}
+        userEmail={userEmail}
         isLoading={isSyncLoading}
         error={syncError}
+        onSignUp={signUp}
+        onSignIn={signIn}
+        onLogout={logout}
+        autoSync={autoSync}
+        onAutoSyncToggle={setAutoSync}
         lastSynced={lastSynced}
-        onConnect={connectSync}
-        onCancelConnect={cancelConnectSync}
-        onDisconnect={disconnectSync}
         onSyncNow={handleManualSync}
         onPush={handleManualPush}
         onPull={handleManualPull}
