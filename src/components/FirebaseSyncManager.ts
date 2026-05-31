@@ -62,17 +62,46 @@ class FirebaseSyncManager {
   }
 
   /**
+   * Parses loose JSON or JavaScript object format into a clean config object.
+   */
+  private parseConfig(configText: string): any {
+    try {
+      return JSON.parse(configText);
+    } catch (e) {
+      try {
+        let cleaned = configText.trim();
+        // Remove variable declaration if present (e.g. const firebaseConfig = )
+        cleaned = cleaned.replace(/^(const|let|var)?\s*[a-zA-Z0-9_]+\s*=\s*/, '');
+        // Remove trailing semicolon
+        cleaned = cleaned.replace(/;\s*$/, '');
+        // Remove comments
+        cleaned = cleaned.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1');
+        // Add quotes to unquoted keys
+        cleaned = cleaned.replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
+        // Replace single quotes with double quotes for string values
+        cleaned = cleaned.replace(/:\s*'([^']*)'/g, ':"$1"');
+        // Remove trailing commas before closing braces/brackets
+        cleaned = cleaned.replace(/,\s*([\]}])/g, '$1');
+        
+        return JSON.parse(cleaned);
+      } catch (innerError) {
+        throw new Error('올바른 JSON 또는 JavaScript 객체 형식이 아닙니다.');
+      }
+    }
+  }
+
+  /**
    * Save configuration to local storage and initialize
    */
   public saveConfig(configText: string): void {
     try {
-      const config = JSON.parse(configText);
+      const config = this.parseConfig(configText);
       // Validate basic config fields
       if (!config.apiKey || !config.projectId) {
         throw new Error('Invalid config. apiKey and projectId are required.');
       }
       this.initFirebase(config);
-      localStorage.setItem(STORAGE_KEY_CONFIG, configText);
+      localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(config, null, 2));
     } catch (e) {
       throw new Error('Firebase configuration parsing failed: ' + (e as Error).message);
     }
