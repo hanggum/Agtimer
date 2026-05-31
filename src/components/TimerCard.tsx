@@ -126,12 +126,8 @@ export const TimerCard: React.FC<TimerCardProps> = ({ timer, onUpdate, onDelete,
   const timeParts = formatTime(currentRemaining);
   const isCompleted = timeParts.isCompleted;
 
-  // Calculate SVG progress ring values
-  const radius = 54;
-  const strokeWidth = 6;
-  const circumference = 2 * Math.PI * radius;
+  // Progress bar percentage (linear bar)
   const progressPercent = totalDurationMs > 0 ? (currentRemaining / totalDurationMs) * 100 : 0;
-  const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
 
   // Determine current status string
   let statusText = 'Paused';
@@ -145,100 +141,85 @@ export const TimerCard: React.FC<TimerCardProps> = ({ timer, onUpdate, onDelete,
   }
 
   return (
-    <div className={`glass-panel timer-card ${colorClass} ${isCompleted ? 'completed-pulse' : ''}`}>
+    <div className={`glass-panel timer-bar-card ${colorClass} ${isCompleted ? 'completed-pulse' : ''}`}>
       {isCompleted && <div className="timer-alert-overlay" />}
       
-      <div className="timer-card-header">
-        <div className="timer-info">
-          <h3 className="timer-title" title={title}>{title}</h3>
-          <div className="timer-meta">
-            <span className="category-tag">{category || 'General'}</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <span className={statusDotClass}></span>
-              <span>{statusText}</span>
-            </div>
+      {/* 1. 맨 왼쪽: 나머지 부분 (컨트롤 버튼들) */}
+      <div className="timer-bar-actions">
+        <button
+          className={`btn btn-icon-only btn-sm ${isRunning ? 'btn-secondary' : 'btn-primary'}`}
+          onClick={handleTogglePlay}
+          title={isRunning ? 'Pause' : 'Start'}
+          aria-label={isRunning ? 'Pause timer' : 'Start timer'}
+        >
+          {isRunning ? <Pause size={14} /> : <Play size={14} />}
+        </button>
+        
+        <button
+          className="btn btn-secondary btn-icon-only btn-sm"
+          onClick={handleReset}
+          title="Reset"
+          aria-label="Reset timer"
+        >
+          <RotateCcw size={14} />
+        </button>
+        
+        <button
+          className="btn btn-secondary btn-icon-only btn-sm"
+          onClick={() => onEdit(timer)}
+          title="Edit"
+          style={{ opacity: 0.8 }}
+          aria-label="Edit timer settings"
+        >
+          <Edit2 size={13} />
+        </button>
+        
+        <button
+          className="btn btn-secondary btn-icon-only btn-sm"
+          onClick={() => onDelete(id)}
+          title="Delete"
+          style={{ opacity: 0.8, color: 'var(--color-danger)' }}
+          aria-label="Delete timer"
+        >
+          <Trash2 size={13} />
+        </button>
+      </div>
+
+      {/* 2. 왼쪽: 이름 */}
+      <div className="timer-bar-info">
+        <h3 className="timer-bar-title" title={title}>{title}</h3>
+        <div className="timer-bar-meta">
+          <span className="category-tag">{category || 'General'}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            <span className={statusDotClass}></span>
+            <span>{statusText}</span>
           </div>
         </div>
-        
+      </div>
+
+      {/* 3. 가운데: 스테이트 바 (진행 상태 바) */}
+      <div className="timer-bar-progress-wrapper">
+        <div className="timer-bar-progress-track">
+          <div 
+            className="timer-bar-progress-fill" 
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
         {isCompleted && (
-          <div style={{ color: 'var(--color-danger)', animation: 'pulse-danger 1s infinite alternate' }}>
-            <BellRing size={20} />
+          <div className="timer-bar-alert-icon" style={{ animation: 'pulse-danger 1s infinite alternate' }}>
+            <BellRing size={16} />
           </div>
         )}
       </div>
 
-      <div className="timer-visual">
-        <svg className="progress-svg" width="128" height="128" viewBox="0 0 128 128">
-          <circle
-            className="progress-track"
-            cx="64"
-            cy="64"
-            r={radius}
-            strokeWidth={strokeWidth}
-          />
-          <circle
-            className="progress-bar"
-            cx="64"
-            cy="64"
-            r={radius}
-            strokeWidth={strokeWidth}
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-          />
-        </svg>
-        
-        <div className="timer-display-wrapper">
-          <div className="timer-time-main">
-            {timeParts.days !== '0' ? `${timeParts.days}d ` : ''}
-            {timeParts.hours}:{timeParts.minutes}:{timeParts.seconds}
-          </div>
-          <div className="timer-time-sub">
-            {isCompleted ? 'FINISHED' : 'REMAINING'}
-          </div>
+      {/* 4. 오른쪽: 남은시간 */}
+      <div className="timer-bar-time-display">
+        <div className="timer-bar-time-main">
+          {timeParts.days !== '0' ? `${timeParts.days}일 ` : ''}
+          {timeParts.hours}:{timeParts.minutes}:{timeParts.seconds}
         </div>
-      </div>
-
-      <div className="timer-actions">
-        <div className="timer-controls-left">
-          <button
-            className={`btn btn-icon-only ${isRunning ? 'btn-secondary' : 'btn-primary'}`}
-            onClick={handleTogglePlay}
-            title={isRunning ? 'Pause' : 'Start'}
-            aria-label={isRunning ? 'Pause timer' : 'Start timer'}
-          >
-            {isRunning ? <Pause size={18} /> : <Play size={18} />}
-          </button>
-          
-          <button
-            className="btn btn-secondary btn-icon-only"
-            onClick={handleReset}
-            title="Reset"
-            aria-label="Reset timer"
-          >
-            <RotateCcw size={18} />
-          </button>
-        </div>
-
-        <div className="timer-controls-right">
-          <button
-            className="btn btn-secondary btn-icon-only"
-            onClick={() => onEdit(timer)}
-            title="Edit"
-            style={{ padding: '0.5rem', opacity: 0.8 }}
-            aria-label="Edit timer settings"
-          >
-            <Edit2 size={16} />
-          </button>
-          
-          <button
-            className="btn btn-secondary btn-icon-only"
-            onClick={() => onDelete(id)}
-            title="Delete"
-            style={{ padding: '0.5rem', opacity: 0.8, color: 'var(--color-danger)' }}
-            aria-label="Delete timer"
-          >
-            <Trash2 size={16} />
-          </button>
+        <div className="timer-bar-time-sub">
+          {isCompleted ? '종료됨' : '남음'}
         </div>
       </div>
     </div>
